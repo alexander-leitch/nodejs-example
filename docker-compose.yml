@@ -1,0 +1,267 @@
+# Docker Compose Configuration
+#
+# This file defines all the services needed to run the application:
+# - MySQL database
+# - PostgreSQL database
+# - Node.js Express API
+# - Nuxt.js frontend
+#
+# Run with: docker-compose up --build
+# Stop with: docker-compose down
+# Remove volumes: docker-compose down -v
+
+# Specify Docker Compose file version
+# Version 3.8 is widely supported and has all features we need
+version: '3.8'
+
+# Define services (containers)
+services:
+  # ===== MySQL Database Service =====
+  mysql:
+    # Use official MySQL 8 image from Docker Hub
+    image: mysql:8.0
+
+    # Container name for easier reference
+    container_name: nodejs-example-mysql
+
+    # Always restart the container if it stops
+    # Options: no, always, on-failure, unless-stopped
+    restart: unless-stopped
+
+    # Environment variables configure MySQL
+    # These are read by the MySQL image on first startup
+    environment:
+      # Root password (change this in production!)
+      MYSQL_ROOT_PASSWORD: root_password
+
+      # Create this database on first startup
+      MYSQL_DATABASE: example_db
+
+      # Create this user with access to the database
+      MYSQL_USER: example_user
+      MYSQL_PASSWORD: example_password
+
+    # Mount the initialization script
+    # Files in /docker-entrypoint-initdb.d/ run on first startup
+    volumes:
+      # Mount our init script to the container
+      - ./database/mysql/init.sql:/docker-entrypoint-initdb.d/init.sql
+
+      # Persist database data in a named volume
+      # This ensures data survives container restarts
+      - mysql_data:/var/lib/mysql
+
+    # Expose MySQL port
+    # Format: "host_port:container_port"
+    # This allows connecting to MySQL from the host machine
+    ports:
+      - "3306:3306"
+
+    # Networks this service belongs to
+    networks:
+      - app-network
+
+    # Health check to verify MySQL is ready
+    # Docker will retry until the service is healthy
+    healthcheck:
+      # Command to check if MySQL is accepting connections
+      test: [ "CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot_password" ]
+      interval: 10s # Check every 10 seconds
+      timeout: 5s # Timeout after 5 seconds
+      retries: 5 # Retry 5 times before marking unhealthy
+      start_period: 30s # Grace period for MySQL to start
+
+  # ===== PostgreSQL Database Service =====
+  postgresql:
+    # Use official PostgreSQL 15 image
+    image: postgres:15-alpine
+
+    container_name: nodejs-example-postgresql
+    restart: unless-stopped
+
+    # PostgreSQL environment variables
+    environment:
+      # Superuser password
+      POSTGRES_PASSWORD: example_password
+
+      # Create this database
+      POSTGRES_DB: example_db
+
+      # Create this user
+      POSTGRES_USER: example_user
+
+    volumes:
+      # Mount initialization script
+      # PostgreSQL runs .sql files in /docker-entrypoint-initdb.d/ on startup
+      - ./database/postgresql/init.sql:/docker-entrypoint-initdb.d/init.sql
+
+      # Persist PostgreSQL data
+      - postgres_data:/var/lib/postgresql/data
+
+    # Expose PostgreSQL port
+    ports:
+      - "5432:5432"
+
+    networks:
+      - app-network
+
+    # Health check for PostgreSQL
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U example_user -d example_db" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # ===== Express API Service =====
+  api:
+    # Build the API image from our Dockerfile
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+
+    container_name: nodejs-example-api
+    restart: unless-stopped
+
+    # Environment variables for the API
+    environment:
+      # Node environment
+      NODE_ENV: production
+
+      # API port
+      PORT: 3001
+
+      # MySQL connection details
+      # These match the MySQL service configuration above
+      MYSQL_HOST: mysql # Service name acts as hostname in Docker network
+      MYSQL_PORT: 3306
+      MYSQL_USER: example_user
+      MYSQL_PASSWORD: example_password
+      MYSQL_DATABASE: example_db
+
+      # PostgreSQL connection details
+      POSTGRES_HOST: postgresql # Service name
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: example_user
+      POSTGRES_PASSWORD: example_password
+      POSTGRES_DB: example_db
+
+      # Frontend URL for CORS
+      FRONTEND_URL: http://frontend:3000
+
+    # Expose API port
+    ports:
+      - "3001:3001"
+
+    networks:
+      - app-network
+
+    # Wait for databases to be healthy before starting
+    # This prevents connection errors on startup
+    depends_on:
+      mysql:
+        condition: service_healthy
+      postgresql:
+        condition: service_healthy
+
+    # Health check for the API
+    healthcheck:
+      test: [ "CMD", "node", "-e", "require('http').get('http://localhost:3001/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1); }).on('error', () => process.exit(1));" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # ===== Nuxt Frontend Service =====
+  frontend:
+    # Build the frontend image from our Dockerfile
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+
+    container_name: nodejs-example-frontend
+    restart: unless-stopped
+
+    # Environment variables for Nuxt
+    environment:
+      # Node environment
+      NODE_ENV: production
+
+      # API base URL
+      # Frontend makes requests to the API service
+      NUXT_PUBLIC_API_BASE: http://api:3001
+
+    # Expose frontend port
+    # This is the main entry point for users
+    ports:
+      - "3000:3000"
+
+    networks:
+      - app-network
+
+    # Wait for API to be healthy
+    depends_on:
+      api:
+        condition: service_healthy
+
+    # Health check for the frontend
+    healthcheck:
+      test: [ "CMD", "node", "-e", "require('http').get('http://localhost:3000', (res) => { process.exit(res.statusCode === 200 ? 0 : 1); }).on('error', () => process.exit(1));" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+# ===== Networks =====
+# Define custom networks for service communication
+networks:
+  app-network:
+    # Bridge driver creates a private network for containers
+    driver: bridge
+    # This allows services to communicate using service names as hostnames
+
+    # ===== Volumes =====
+    # Named volumes persist data across container restarts
+volumes:
+  # MySQL data volume
+  mysql_data:
+    driver: local
+
+  # PostgreSQL data volume
+  postgres_data:
+    driver: local
+
+# ===== Usage Instructions =====
+#
+# Start all services:
+#   docker-compose up
+#
+# Start in background (detached mode):
+#   docker-compose up -d
+#
+# Rebuild images and start:
+#   docker-compose up --build
+#
+# View logs:
+#   docker-compose logs -f
+#   docker-compose logs -f api        # Just API logs
+#
+# Stop all services:
+#   docker-compose down
+#
+# Stop and remove volumes (DELETES ALL DATA):
+#   docker-compose down -v
+#
+# Check status:
+#   docker-compose ps
+#
+# Execute command in a container:
+#   docker-compose exec api sh        # Open shell in API container
+#   docker-compose exec mysql mysql -u root -p  # Connect to MySQL
+#
+# ===== Access Points =====
+#
+# Frontend:     http://localhost:3000
+# API:          http://localhost:3001
+# MySQL:        localhost:3306
+# PostgreSQL:   localhost:5432
