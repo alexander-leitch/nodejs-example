@@ -1,0 +1,100 @@
+# Render.com Blueprint Configuration
+#
+# This file defines the infrastructure for deploying to Render.com
+# It creates a web service for the API and a PostgreSQL database
+#
+# Learn more: https://render.com/docs/blueprint-spec
+
+services:
+  # ============================================================
+  # PostgreSQL Database
+  # ============================================================
+  - type: pserv
+    name: nodejs-example-db
+    env: docker
+    plan: free
+    # Database configuration
+    # Free tier includes 1GB storage
+    database: example_db
+    user: example_user
+    
+  # ============================================================
+  # Express API Web Service
+  # ============================================================
+  - type: web
+    name: nodejs-example-api
+    env: docker
+    plan: free
+    # Free tier limitations:
+    # - Spins down after 15 minutes of inactivity
+    # - 750 hours/month free (enough for one service)
+    # - Cold start time ~30 seconds
+    
+    # Build configuration
+    buildCommand: cd api && npm ci
+    startCommand: cd api && node src/index.js
+    
+    # Health check endpoint
+    healthCheckPath: /health
+    
+    # Environment variables
+    envVars:
+      # Node environment
+      - key: NODE_ENV
+        value: production
+      
+      # API port (Render assigns this automatically)
+      - key: PORT
+        value: 3001
+      
+      # PostgreSQL connection details
+      # These are automatically populated from the database service
+      - key: POSTGRES_HOST
+        fromDatabase:
+          name: nodejs-example-db
+          property: host
+      
+      - key: POSTGRES_PORT
+        fromDatabase:
+          name: nodejs-example-db
+          property: port
+      
+      - key: POSTGRES_USER
+        fromDatabase:
+          name: nodejs-example-db
+          property: user
+      
+      - key: POSTGRES_PASSWORD
+        fromDatabase:
+          name: nodejs-example-db
+          property: password
+      
+      - key: POSTGRES_DB
+        fromDatabase:
+          name: nodejs-example-db
+          property: database
+      
+      # MySQL not available on free tier
+      # Set dummy values so app doesn't crash
+      - key: MYSQL_HOST
+        value: localhost
+      - key: MYSQL_PORT
+        value: 3306
+      - key: MYSQL_USER
+        value: root
+      - key: MYSQL_PASSWORD
+        value: password
+      - key: MYSQL_DATABASE
+        value: example_db
+      
+      # CORS - allow frontend origin
+      # Update this after deploying frontend to Vercel
+      - key: FRONTEND_URL
+        value: https://your-frontend.vercel.app
+
+# Notes:
+# - Free tier services sleep after 15 minutes of inactivity
+# - First request after sleep takes ~30 seconds (cold start)
+# - Database is persistent and doesn't sleep
+# - This configuration only supports PostgreSQL (MySQL not available on free tier)
+# - Update FRONTEND_URL after deploying to Vercel

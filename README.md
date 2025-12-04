@@ -20,12 +20,14 @@ Every file includes extensive comments explaining **why** things work the way th
 - [Features](#-features)
 - [Prerequisites](#-prerequisites)
 - [Quick Start](#-quick-start)
+- [Live Demo & Deployment](#-live-demo--deployment)
 - [Project Structure](#-project-structure)
 - [API Documentation](#-api-documentation)
 - [Database Schemas](#-database-schemas)
 - [Development Guide](#-development-guide)
 - [Troubleshooting](#-troubleshooting)
 - [Learning Resources](#-learning-resources)
+- [Built with Google Antigravity](#-built-with-google-antigravity)
 
 ## ✨ Features
 
@@ -113,6 +115,47 @@ docker-compose down
 # Stop and remove all data (volumes)
 docker-compose down -v
 ```
+
+## 🌐 Live Demo & Deployment
+
+### Deployed Version
+
+This project includes automated CI/CD and can be deployed to free hosting services:
+
+- **Frontend:** Deploy to [Vercel](https://vercel.com) (Free tier)
+- **Backend API:** Deploy to [Render.com](https://render.com) (Free tier with PostgreSQL)
+
+> **Note:** The deployed version uses PostgreSQL only (MySQL not available on free tiers). Local development supports both databases.
+
+### CI/CD Pipeline
+
+The project includes GitHub Actions that automatically:
+
+1. **Test on Every Push:**
+   - Validate Docker Compose configuration
+   - Build and test API
+   - Build and test Frontend
+   - Run health checks
+
+2. **Deploy on Push to Main:**
+   - Deploy backend API to Render.com
+   - Deploy frontend to Vercel
+   - Only deploys if all tests pass
+
+### Deploy Your Own Copy
+
+See [DEPLOYMENT.md](DEPLOYMENT.md) for complete deployment instructions including:
+- Step-by-step Render.com setup
+- Step-by-step Vercel setup
+- Environment variables configuration
+- GitHub Actions setup
+- Troubleshooting guide
+
+**Quick Deploy:**
+1. Fork this repository
+2. Sign up for [Render.com](https://render.com) and [Vercel](https://vercel.com)
+3. Follow the [Deployment Guide](DEPLOYMENT.md)
+4. Your app will be live in ~10 minutes!
 
 ## 📁 Project Structure
 
