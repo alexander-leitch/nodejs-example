@@ -81,25 +81,43 @@ app.use('/api/postgresql', postgresRoutes);
  * Health Check Endpoint
  * 
  * This endpoint is useful for monitoring and container health checks
- * It verifies that the API is running and can connect to both databases
+ * It verifies that the API is running and can connect to databases
+ * 
+ * In production (Render), MySQL is not available so we only check PostgreSQL
+ * Locally with Docker, both databases are checked
  */
 app.get('/health', async (req, res) => {
-    // Test both database connections
-    const mysqlStatus = await mysqlDb.testConnection();
-    const postgresStatus = await postgresDb.testConnection();
+    try {
+        // Test both database connections
+        const mysqlStatus = await mysqlDb.testConnection();
+        const postgresStatus = await postgresDb.testConnection();
 
-    // If both databases are healthy, return 200 OK
-    // If either fails, return 503 Service Unavailable
-    const isHealthy = mysqlStatus && postgresStatus;
+        // In production, only PostgreSQL is required
+        // MySQL is only available in local development
+        const isProduction = process.env.NODE_ENV === 'production';
+        const isHealthy = isProduction
+            ? postgresStatus  // Production: only need PostgreSQL
+            : (mysqlStatus && postgresStatus);  // Development: need both
 
-    res.status(isHealthy ? 200 : 503).json({
-        status: isHealthy ? 'healthy' : 'unhealthy',
-        timestamp: new Date().toISOString(),
-        databases: {
-            mysql: mysqlStatus ? 'connected' : 'disconnected',
-            postgresql: postgresStatus ? 'connected' : 'disconnected'
-        }
-    });
+        res.status(isHealthy ? 200 : 503).json({
+            status: isHealthy ? 'healthy' : 'unhealthy',
+            timestamp: new Date().toISOString(),
+            environment: process.env.NODE_ENV || 'development',
+            databases: {
+                mysql: mysqlStatus ? 'connected' : 'disconnected',
+                postgresql: postgresStatus ? 'connected' : 'disconnected'
+            },
+            note: isProduction ? 'MySQL not available in production (free tier limitation)' : null
+        });
+    } catch (error) {
+        // If health check itself fails, return 503
+        console.error('Health check error:', error);
+        res.status(503).json({
+            status: 'unhealthy',
+            error: 'Health check failed',
+            timestamp: new Date().toISOString()
+        });
+    }
 });
 
 /**
@@ -163,29 +181,58 @@ app.use((err, req, res, next) => {
  * Start the Server
  * 
  * Test database connections first, then start listening for requests
+ * In production, MySQL is not available so we only require PostgreSQL
  */
 async function startServer() {
     try {
         console.log('🚀 Starting server...');
+        console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
         console.log('📊 Testing database connections...');
 
+        const isProduction = process.env.NODE_ENV === 'production';
+
         // Test database connections
-        await mysqlDb.testConnection();
-        await postgresDb.testConnection();
+        // In production, MySQL connection will fail but that's expected
+        const mysqlConnected = await mysqlDb.testConnection();
+        const postgresConnected = await postgresDb.testConnection();
+
+        if (!postgresConnected) {
+            throw new Error('PostgreSQL connection failed - cannot start server');
+        }
+
+        if (!mysqlConnected && !isProduction) {
+            console.warn('⚠️  MySQL connection failed (expected in production)');
+        }
+
+        console.log(`✅ PostgreSQL: ${postgresConnected ? 'Connected' : 'Disconnected'}`);
+        console.log(`${isProduction ? '⚠️ ' : '✅'} MySQL: ${mysqlConnected ? 'Connected' : 'Disconnected (not available in production)'}`);
 
         // Start the Express server
+        // Bind to 0.0.0.0 to accept connections from any network interface
+        // This is important for Docker and cloud deployments
         app.listen(PORT, '0.0.0.0', () => {
             console.log(`✅ Server is running on port ${PORT}`);
             console.log(`📍 API available at http://localhost:${PORT}`);
             console.log(`🏥 Health check at http://localhost:${PORT}/health`);
             console.log(`\n📚 API Endpoints:`);
-            console.log(`   MySQL:      http://localhost:${PORT}/api/mysql/tasks`);
             console.log(`   PostgreSQL: http://localhost:${PORT}/api/postgresql/tasks`);
+            if (!isProduction) {
+                console.log(`   MySQL:      http://localhost:${PORT}/api/mysql/tasks`);
+            }
         });
     } catch (error) {
         console.error('❌ Failed to start server:', error);
         process.exit(1); // Exit with error code
     }
+}
+console.log(`\n📚 API Endpoints:`);
+console.log(`   MySQL:      http://localhost:${PORT}/api/mysql/tasks`);
+console.log(`   PostgreSQL: http://localhost:${PORT}/api/postgresql/tasks`);
+        });
+    } catch (error) {
+    console.error('❌ Failed to start server:', error);
+    process.exit(1); // Exit with error code
+}
 }
 
 // Start the server
