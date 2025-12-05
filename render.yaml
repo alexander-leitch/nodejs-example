@@ -12,25 +12,22 @@ services:
   - type: pserv
     name: nodejs-example-db
     plan: free
-    # PostgreSQL version
-    ipAllowList: []
-    # Database configuration
     # Free tier includes 1GB storage, expires after 90 days
     # Note: Free PostgreSQL databases on Render expire after 90 days of creation
     
   # ============================================================
-  # Express API Web Service
+  # Express API Web Service (Native Node.js)
   # ============================================================
   - type: web
     name: nodejs-example-api
-    env: docker
+    runtime: node
     plan: free
     # Free tier limitations:
     # - Spins down after 15 minutes of inactivity
     # - 750 hours/month free (enough for one service)
     # - Cold start time ~30 seconds
     
-    # Build configuration
+    # Build and start configuration for Node.js runtime
     buildCommand: cd api && npm ci
     startCommand: cd api && node src/index.js
     
@@ -43,9 +40,9 @@ services:
       - key: NODE_ENV
         value: production
       
-      # API port (Render assigns this automatically)
+      # API port (Render assigns this automatically, but we set default)
       - key: PORT
-        value: 3001
+        value: 10000
       
       # PostgreSQL connection details
       # These are automatically populated from the database service
@@ -75,7 +72,7 @@ services:
           property: database
       
       # MySQL not available on free tier
-      # Set dummy values so app doesn't crash
+      # Set dummy values so app doesn't crash on startup
       - key: MYSQL_HOST
         value: localhost
       - key: MYSQL_PORT
@@ -98,3 +95,5 @@ services:
 # - Database is persistent and doesn't sleep
 # - This configuration only supports PostgreSQL (MySQL not available on free tier)
 # - Update FRONTEND_URL after deploying to Vercel
+# - Using native Node.js runtime (not Docker) for simpler deployment
+
