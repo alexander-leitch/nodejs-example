@@ -5,18 +5,17 @@
 #
 # Learn more: https://render.com/docs/blueprint-spec
 
+# Database configuration
+databases:
+  - name: nodejs-example-db
+    plan: free
+    databaseName: example_db
+    user: example_user
+
+# Services configuration
 services:
   # ============================================================
-  # PostgreSQL Database
-  # ============================================================
-  - type: pserv
-    name: nodejs-example-db
-    plan: free
-    # Free tier includes 1GB storage, expires after 90 days
-    # Note: Free PostgreSQL databases on Render expire after 90 days of creation
-    
-  # ============================================================
-  # Express API Web Service (Native Node.js)
+  # Express API Web Service
   # ============================================================
   - type: web
     name: nodejs-example-api
@@ -27,9 +26,12 @@ services:
     # - 750 hours/month free (enough for one service)
     # - Cold start time ~30 seconds
     
+    # Root directory for the service
+    rootDir: api
+    
     # Build and start configuration for Node.js runtime
-    buildCommand: cd api && npm ci
-    startCommand: cd api && node src/index.js
+    buildCommand: npm ci
+    startCommand: node src/index.js
     
     # Health check endpoint
     healthCheckPath: /health
@@ -45,7 +47,7 @@ services:
         value: 10000
       
       # PostgreSQL connection details
-      # These are automatically populated from the database service
+      # These are automatically populated from the database
       - key: POSTGRES_HOST
         fromDatabase:
           name: nodejs-example-db
@@ -93,7 +95,7 @@ services:
 # - Free tier services sleep after 15 minutes of inactivity
 # - First request after sleep takes ~30 seconds (cold start)
 # - Database is persistent and doesn't sleep
+# - Free PostgreSQL databases on Render expire after 90 days
 # - This configuration only supports PostgreSQL (MySQL not available on free tier)
 # - Update FRONTEND_URL after deploying to Vercel
 # - Using native Node.js runtime (not Docker) for simpler deployment
-
