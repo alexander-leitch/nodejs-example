@@ -89,7 +89,7 @@ services:
       # CORS - allow frontend origin
       # Update this after deploying frontend to Vercel
       - key: FRONTEND_URL
-        value: https://your-frontend.vercel.app
+        value: https://nodejs-example-seven.vercel.app
 
 # Notes:
 # - Free tier services sleep after 15 minutes of inactivity
