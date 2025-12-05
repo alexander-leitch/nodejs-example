@@ -100,12 +100,15 @@ export default defineNuxtConfig({
   },
 
   /**
-   * CSS Configuration
+   * Global CSS
    * 
-   * Global styles that will be included in every page
+   * Import global stylesheets here
+   * These will be included in every page
+   * Use '~/assets/css/filename' to reference files in the assets directory
    */
   css: [
-    // We'll create this file for global styles
-    '~/assets/css/main.css'
-  ]
+    // Global CSS with design system and utility classes
+    // Using relative path for Docker compatibility
+    './assets/css/main.css'
+  ],
 })
