@@ -16,6 +16,10 @@ export default defineNuxtConfig({
   // Enable compatibility features for Nuxt 4
   compatibilityDate: '2024-11-01',
 
+  // Set srcDir to current directory (default in Nuxt 4 is 'app/')
+  // This prevents /app/app/ path issues in Docker
+  srcDir: '.',
+
   // Enable Nuxt DevTools for better development experience
   // This provides a visual interface for debugging and understanding your app
   devtools: { enabled: true },
