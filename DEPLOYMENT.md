@@ -20,9 +20,11 @@ This guide walks you through deploying the Node.js Database Example to free host
 
 ## 📋 Prerequisites
 
-1. GitHub account with your code repository
+1. GitHub account with your code repository pushed
 2. Render.com account (free) - [Sign up](https://render.com)
 3. Vercel account (free) - [Sign up](https://vercel.com)
+
+> **Important:** Ensure `api/package-lock.json` is committed to your repository. Render's `npm ci` command requires this lockfile. If missing, run `npm install` in the api directory and commit the generated file.
 
 ## 🚀 Deployment Steps
 
@@ -232,6 +234,28 @@ Both services are **completely free** for this project:
 ### GitHub Actions Skipping Deployment
 - **Cause:** Secrets not configured
 - **Solution:** Add required secrets to GitHub repository settings
+
+### Render Build Failed: Missing package-lock.json
+- **Cause:** `npm ci` requires a lockfile but it wasn't committed
+- **Solution:** 
+  1. Run `npm install` in the `api` directory
+  2. Remove `package-lock.json` from `.gitignore` if present
+  3. Commit `api/package-lock.json`
+  4. Push to GitHub
+
+### Render Blueprint Validation Errors
+- **Cause:** Invalid `render.yaml` configuration
+- **Common Issues:**
+  - PostgreSQL must be in `databases:` section, not `services:`
+  - Use `runtime: node` for Node.js services (not `env: docker`)
+  - Set `rootDir: api` instead of using `cd api` in commands
+- **Solution:** Review the corrected `render.yaml` in this repository
+
+### Deployment Shows 2 Services on Render (Expected)
+- **This is correct!** You should see:
+  1. `nodejs-example-db` (PostgreSQL Database)
+  2. `nodejs-example-api` (Web Service)
+- The frontend deploys separately to Vercel
 
 ## 🔄 Updating After Code Changes
 
