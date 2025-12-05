@@ -11,12 +11,12 @@ services:
   # ============================================================
   - type: pserv
     name: nodejs-example-db
-    env: docker
     plan: free
+    # PostgreSQL version
+    ipAllowList: []
     # Database configuration
-    # Free tier includes 1GB storage
-    database: example_db
-    user: example_user
+    # Free tier includes 1GB storage, expires after 90 days
+    # Note: Free PostgreSQL databases on Render expire after 90 days of creation
     
   # ============================================================
   # Express API Web Service
