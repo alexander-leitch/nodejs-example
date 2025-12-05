@@ -225,15 +225,6 @@ async function startServer() {
         process.exit(1); // Exit with error code
     }
 }
-console.log(`\n📚 API Endpoints:`);
-console.log(`   MySQL:      http://localhost:${PORT}/api/mysql/tasks`);
-console.log(`   PostgreSQL: http://localhost:${PORT}/api/postgresql/tasks`);
-        });
-    } catch (error) {
-    console.error('❌ Failed to start server:', error);
-    process.exit(1); // Exit with error code
-}
-}
 
 // Start the server
 startServer();
